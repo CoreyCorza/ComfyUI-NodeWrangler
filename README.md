@@ -49,4 +49,4 @@ The top of `web/nodewrangler.js` has variables you can tweak:
 
 ## Installation
 
-Drop the `ComfyUI-NodeWrangler` folder into your `ComfyUI/custom_nodes/` directory and restart ComfyUI. No Python dependencies required — this is a frontend-only extension.
+Git clone or download/drop the `ComfyUI-NodeWrangler` folder into your `ComfyUI/custom_nodes/` directory and restart ComfyUI. No Python dependencies required — this is a frontend-only extension.
