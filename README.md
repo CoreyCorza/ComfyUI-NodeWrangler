@@ -6,6 +6,10 @@ Blender-inspired keyboard shortcuts for faster node wiring in ComfyUI.
 
 ### Alt + Right Mouse Button — Connect Nodes
 
+
+https://github.com/user-attachments/assets/0443b0f7-a1db-4d05-b2e7-bae9fa5f3836
+
+
 Hold **Alt** and **right-click drag** from one node to another to automatically connect them.
 
 - You don't need to aim at a specific socket — just start anywhere on the source node and release on the target node.
@@ -19,6 +23,10 @@ Hold **Alt** and **right-click drag** from one node to another to automatically 
 ### Ctrl + Right Mouse Button — Cut Connections
 
 Hold **Ctrl** and **right-click drag** to draw a slash across noodles to disconnect them.
+
+
+https://github.com/user-attachments/assets/cef28732-9def-4ff8-946a-7ec19c6c1b25
+
 
 - Any noodle your slash line crosses gets removed.
 - Cut multiple noodles in a single drag.
