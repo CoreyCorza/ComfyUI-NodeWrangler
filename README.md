@@ -5,9 +5,13 @@ Git clone or download/drop the `ComfyUI-NodeWrangler` folder into your `ComfyUI/
 # ComfyUI Node Wrangler
 
 Blender-inspired keyboard shortcuts for faster node connection/disconnection in ComfyUI.  
-Just a prototype at the moment - has not been extensively tested yet to handle all scenarios  
+Just a prototype at the moment - has not been extensively tested yet to handle all scenarios.  
 Some bugs might be present.  
-Doesn't work with nodes 2.0 (yet?)
+Doesn't work with nodes 2.0 (yet?)  
+  
+Note: Like with Blenders nodewrangler, you'll find situations where you just have to join something manually.  
+Its fairly time consuming to cover literally every possible combination of when something should or not connect.
+Aside of having to do a manual connection here and there, this at least speeds things up for most scenarios.
 
 ## Features
 
