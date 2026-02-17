@@ -1,6 +1,6 @@
 # Installation
 
-Git clone or download/drop the `ComfyUI-NodeWrangler` folder into your `ComfyUI/custom_nodes/` directory and restart ComfyUI. No Python dependencies required — this is a frontend-only extension.
+Git clone `ComfyUI-NodeWrangler` to your `ComfyUI/custom_nodes/` directory and restart ComfyUI. No Python dependencies required — this is a frontend-only extension.
 
 # ComfyUI Node Wrangler
 
