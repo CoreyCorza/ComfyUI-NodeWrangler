@@ -93,11 +93,37 @@ if (app) {
                     return false;
                 }
 
+                function outputHasAnyLinks(oi) {
+                    const links = srcOutputs[oi].links;
+                    return links && links.length > 0;
+                }
+
+                // Output indices sorted: unlinked outputs first, then linked ones
+                const outputOrder = [...Array(srcOutputs.length).keys()].sort((a, b) => {
+                    const aLinked = outputHasAnyLinks(a) ? 1 : 0;
+                    const bLinked = outputHasAnyLinks(b) ? 1 : 0;
+                    return aLinked - bLinked || a - b;
+                });
+
                 const dstId = dstNode.id;
+
+                // Pass 0: name + type match (prefer slots with matching names)
+                for (const oi of outputOrder) {
+                    if (outputAlreadyLinkedTo(oi, dstId)) continue;
+                    const oName = (srcOutputs[oi].name || "").toLowerCase();
+
+                    for (let ii = 0; ii < dstInputs.length; ii++) {
+                        if (dstInputs[ii].link != null) continue;
+                        const iName = (dstInputs[ii].name || "").toLowerCase();
+                        if (oName && iName && oName === iName && typesMatch(srcOutputs[oi].type, dstInputs[ii].type)) {
+                            return { outputSlot: oi, inputSlot: ii };
+                        }
+                    }
+                }
 
                 // Pass 1: type matches, ordered by type priority
                 for (const priorityType of TYPE_PRIORITY) {
-                    for (let oi = 0; oi < srcOutputs.length; oi++) {
+                    for (const oi of outputOrder) {
                         if (outputAlreadyLinkedTo(oi, dstId)) continue;
                         const oType = normalizeType(srcOutputs[oi].type);
                         if (!oType.split(",").includes(priorityType)) continue;
@@ -111,7 +137,7 @@ if (app) {
                 }
 
                 // Pass 2: remaining matches not in priority list
-                for (let oi = 0; oi < srcOutputs.length; oi++) {
+                for (const oi of outputOrder) {
                     if (outputAlreadyLinkedTo(oi, dstId)) continue;
 
                     for (let ii = 0; ii < dstInputs.length; ii++) {
@@ -122,7 +148,7 @@ if (app) {
                 }
 
                 // Pass 3: wildcard matches (one side is *)
-                for (let oi = 0; oi < srcOutputs.length; oi++) {
+                for (const oi of outputOrder) {
                     if (outputAlreadyLinkedTo(oi, dstId)) continue;
                     const oType = normalizeType(srcOutputs[oi].type);
 
