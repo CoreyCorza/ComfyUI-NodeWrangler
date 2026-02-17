@@ -29,6 +29,10 @@ Hold **Alt** and **right-click drag** from one node to another to automatically 
 
 ### Ctrl + Alt + Right Mouse Button — Connect All
 
+
+https://github.com/user-attachments/assets/985a5279-bb6c-4885-8a04-9f0f70941468
+
+
 Hold **Ctrl**, **Alt** and **right-click drag** from one node to another to connect all matching sockets in a single drag.
 
 - Connects every compatible socket pair at once — no need to drag multiple times.
