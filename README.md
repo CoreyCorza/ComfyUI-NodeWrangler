@@ -27,6 +27,18 @@ Hold **Alt** and **right-click drag** from one node to another to automatically 
 - If there's nothing to connect, both nodes show an orange highlight.
 - While dragging, a preview noodle shows exactly which sockets will be connected.
 
+### Ctrl + Alt + Right Mouse Button — Connect All
+
+Hold **Ctrl**, **Alt** and **right-click drag** from one node to another to connect all matching sockets in a single drag.
+
+- Connects every compatible socket pair at once — no need to drag multiple times.
+- Each output connects to at most one input (one-to-one); a single output does not fan out to multiple inputs.
+- Uses the same type-aware matching as Alt+RMB: IMAGE to IMAGE, MASK to MASK, MODEL to MODEL, etc.
+- Supports V3 multi-type sockets.
+- Already-connected sockets are skipped.
+- If there's nothing to connect, both nodes show an orange highlight.
+- While dragging, preview noodles show exactly which sockets will be connected.
+
 ### Ctrl + Right Mouse Button — Cut Connections
 
 Hold **Ctrl** and **right-click drag** to draw a slash across noodles to disconnect them.
