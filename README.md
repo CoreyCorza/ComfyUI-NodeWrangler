@@ -55,7 +55,7 @@ The top of `web/nodewrangler.js` has variables you can tweak:
 
 
 ## Update Log
-17/02-2026 - Tweak: Single output vs multi output  
+17/02-2026 - Tweak: Single output vs multi output  https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/8adaa0fd46755bbab55356a847fad00398247caf  
 Needed to handle a single output being able to connect to multiple other nodes  
 But also handle multiple outputs needing to connect to multiple nodes  
 Will it affect anything else? Not sure.. seems ok.
