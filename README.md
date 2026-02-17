@@ -1,3 +1,7 @@
+# Installation
+
+Git clone or download/drop the `ComfyUI-NodeWrangler` folder into your `ComfyUI/custom_nodes/` directory and restart ComfyUI. No Python dependencies required — this is a frontend-only extension.
+
 # ComfyUI Node Wrangler
 
 Blender-inspired keyboard shortcuts for faster node connection/disconnection in ComfyUI.
@@ -47,6 +51,14 @@ The top of `web/nodewrangler.js` has variables you can tweak:
 | `NW_NO_MATCH_COLOR` | `#E8A035` | Highlight color when no sockets are available |
 | `NW_CUT_COLOR` | `#E85050` | Color of the cut slash line |
 
-## Installation
 
-Git clone or download/drop the `ComfyUI-NodeWrangler` folder into your `ComfyUI/custom_nodes/` directory and restart ComfyUI. No Python dependencies required — this is a frontend-only extension.
+
+
+## Update Log
+17/02-2026 - Tweak: Single output vs multi output
+Needed to handle a single output being able to connect to multiple other nodes
+But also handle multiple outputs needing to connect to multiple nodes
+
+https://github.com/user-attachments/assets/15e83772-0739-46f4-a20c-7c03aac7acfb
+
+
