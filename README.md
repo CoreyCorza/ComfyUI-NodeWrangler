@@ -1,6 +1,8 @@
 # ComfyUI Node Wrangler
 
-Blender-inspired keyboard shortcuts for faster node wiring in ComfyUI.
+Blender-inspired keyboard shortcuts for faster node connection/disconnection in ComfyUI.
+Just a prototype at the moment - has not been extensively tested yet to handle all scenarios.
+Some bugs might be present.
 
 ## Features
 
