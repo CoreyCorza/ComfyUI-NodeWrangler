@@ -58,6 +58,7 @@ The top of `web/nodewrangler.js` has variables you can tweak:
 17/02-2026 - Tweak: Single output vs multi output  
 Needed to handle a single output being able to connect to multiple other nodes  
 But also handle multiple outputs needing to connect to multiple nodes  
+Will it affect anything else? Not sure.. seems ok.
 
 https://github.com/user-attachments/assets/15e83772-0739-46f4-a20c-7c03aac7acfb
 
