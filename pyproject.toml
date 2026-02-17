@@ -1,0 +1,12 @@
+[project]
+name = "crz-nodewrangler"
+description = "Blender-style Alt+RMB drag to auto-connect nodes"
+version = "1.0.0"
+license = "MIT"
+
+[project.urls]
+Repository = "https://github.com/crz/crz-nodewrangler"
+
+[tool.comfy]
+PublisherId = "crz"
+DisplayName = "CRZ Node Wrangler"
