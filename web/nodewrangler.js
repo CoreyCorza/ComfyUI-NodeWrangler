@@ -8,6 +8,9 @@ const NW_RADIUS = 10;
 const NW_DOT = 4;
 const NW_NO_MATCH_COLOR = "#E8A035";
 const NW_CUT_COLOR = "#E85050";
+const NW_BUTTON_COLOR = "rgb(93, 178, 235)";
+const NW_BUTTON_OFF_COLOR = "#666";
+const NW_STORAGE_KEY = "comfy-nodewrangler-enabled";
 
 let app;
 try {
@@ -42,6 +45,33 @@ if (app) {
                 active: false,
                 points: [],
             };
+
+            let enabled = true;
+            try {
+                const stored = localStorage.getItem(NW_STORAGE_KEY);
+                if (stored !== null) enabled = stored === "true";
+            } catch (_) {}
+
+            function setEnabled(v) {
+                enabled = !!v;
+                try {
+                    localStorage.setItem(NW_STORAGE_KEY, String(enabled));
+                } catch (_) {}
+                btn.classList.toggle("nw-off", !enabled);
+                btn.title = enabled ? "Node Wrangler: ON (Alt/Ctrl+RMB)" : "Node Wrangler: OFF";
+            }
+
+            const btn = document.createElement("button");
+            btn.className = "comfy-nodewrangler-toggle";
+            btn.textContent = "NodeWrangler";
+            btn.title = "Node Wrangler: ON (Alt/Ctrl+RMB)";
+            btn.style.cssText = `position:fixed;bottom:12px;left:130px;z-index:9999;width:100px;height:28px;border-radius:6px;border:1px solid ${NW_BUTTON_COLOR};background:rgb(40, 40, 40);color:${NW_BUTTON_COLOR};font:11px monospace;cursor:pointer;opacity:0.85;transition:opacity 0.15s,color 0.15s;`;
+            const style = document.createElement("style");
+            style.textContent = `.comfy-nodewrangler-toggle.nw-off{opacity:0.4!important;color:${NW_BUTTON_OFF_COLOR}!important;border:1px solid ${NW_BUTTON_OFF_COLOR}!important;}`;
+            document.head.appendChild(style);
+            btn.onclick = () => setEnabled(!enabled);
+            setEnabled(enabled);
+            document.body.appendChild(btn);
 
             const TYPE_PRIORITY = [
                 "MODEL", "CLIP", "VAE", "CONDITIONING", "LATENT",
@@ -444,7 +474,7 @@ if (app) {
             const origDrawFrontCanvas = canvas.drawFrontCanvas.bind(canvas);
             canvas.drawFrontCanvas = function () {
                 origDrawFrontCanvas.apply(this, arguments);
-                if (state.active || cutState.active) {
+                if (enabled && (state.active || cutState.active)) {
                     const ctx = this.ctx || (this.bgcanvas && this.bgcanvas.getContext("2d"));
                     if (ctx) {
                         ctx.save();
@@ -463,7 +493,7 @@ if (app) {
             const canvasEl = canvas.canvas;
 
             canvasEl.addEventListener("pointerdown", (e) => {
-                if (e.button !== 2 || !e.altKey) return;
+                if (!enabled || e.button !== 2 || !e.altKey) return;
 
                 const [gx, gy] = eventToGraph(e);
                 const node = getNodeAt(gx, gy);
@@ -527,7 +557,7 @@ if (app) {
             // --- Ctrl+RMB cut handlers ---
 
             canvasEl.addEventListener("pointerdown", (e) => {
-                if (e.button !== 2 || !e.ctrlKey || e.altKey) return;
+                if (!enabled || e.button !== 2 || !e.ctrlKey || e.altKey) return;
 
                 const [gx, gy] = eventToGraph(e);
                 cutState.active = true;
