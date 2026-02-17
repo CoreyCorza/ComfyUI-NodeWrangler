@@ -1,5 +1,6 @@
 // CRZ Node Wrangler - Blender-style node connection shortcuts
 // Alt + RMB drag: connect nodes (one socket pair per drag)
+// Ctrl + Alt + RMB drag: connect all matching sockets at once
 // Ctrl + RMB drag: cut noodles by slashing across them
 
 const NW_COLOR = "#5B9DF0";
@@ -39,6 +40,7 @@ if (app) {
                 mouseX: 0,
                 mouseY: 0,
                 targetNode: null,
+                connectAllMode: false,
             };
 
             const cutState = {
@@ -58,13 +60,13 @@ if (app) {
                     localStorage.setItem(NW_STORAGE_KEY, String(enabled));
                 } catch (_) {}
                 btn.classList.toggle("nw-off", !enabled);
-                btn.title = enabled ? "Node Wrangler: ON (Alt/Ctrl+RMB)" : "Node Wrangler: OFF";
+                btn.title = enabled ? "Node Wrangler: ON (Alt/Ctrl/Ctrl+Alt+RMB)" : "Node Wrangler: OFF";
             }
 
             const btn = document.createElement("button");
             btn.className = "comfy-nodewrangler-toggle";
             btn.textContent = "NodeWrangler";
-            btn.title = "Node Wrangler: ON (Alt/Ctrl+RMB)";
+            btn.title = "Node Wrangler: ON (Alt/Ctrl/Ctrl+Alt+RMB)";
             btn.style.cssText = `position:fixed;bottom:12px;left:130px;z-index:9999;width:100px;height:28px;border-radius:6px;border:1px solid ${NW_BUTTON_COLOR};background:rgb(40, 40, 40);color:${NW_BUTTON_COLOR};font:11px monospace;cursor:pointer;opacity:0.85;transition:opacity 0.15s,color 0.15s;`;
             const style = document.createElement("style");
             style.textContent = `.comfy-nodewrangler-toggle.nw-off{opacity:0.4!important;color:${NW_BUTTON_OFF_COLOR}!important;border:1px solid ${NW_BUTTON_OFF_COLOR}!important;}`;
@@ -244,6 +246,110 @@ if (app) {
             // Forward only: source (first node) outputs -> target (second node) inputs
             function findBest(srcNode, dstNode) {
                 return findBestConnection(srcNode, dstNode);
+            }
+
+            // Returns ALL matching connections (for Ctrl+Alt connect-all)
+            function findAllConnections(srcNode, dstNode) {
+                if (!srcNode || !dstNode) return [];
+                const srcOutputs = srcNode.outputs;
+                const dstInputs = dstNode.inputs;
+                if (!srcOutputs || !dstInputs) return [];
+
+                function outputAlreadyLinkedTo(oi, targetId) {
+                    const links = srcOutputs[oi].links;
+                    if (!links || !app.graph) return false;
+                    for (const linkId of links) {
+                        const link = app.graph.links[linkId];
+                        if (link && link.target_id === targetId) return true;
+                    }
+                    return false;
+                }
+
+                function outputHasAnyLinks(oi) {
+                    const links = srcOutputs[oi].links;
+                    return links && links.length > 0;
+                }
+
+                const outputOrder = [...Array(srcOutputs.length).keys()].sort((a, b) => {
+                    const aLinked = outputHasAnyLinks(a) ? 1 : 0;
+                    const bLinked = outputHasAnyLinks(b) ? 1 : 0;
+                    return aLinked - bLinked || a - b;
+                });
+
+                const dstId = dstNode.id;
+                const results = [];
+                const usedInputs = new Set();
+                const usedOutputs = new Set();
+
+                function tryMatch(oi, ii) {
+                    if (usedOutputs.has(oi)) return false;
+                    if (outputAlreadyLinkedTo(oi, dstId)) return false;
+                    if (usedInputs.has(ii)) return false;
+                    if (dstInputs[ii].link != null) return false;
+                    if (!typesMatch(srcOutputs[oi].type, dstInputs[ii].type)) return false;
+                    return true;
+                }
+
+                // Pass 0: name + type match
+                for (const oi of outputOrder) {
+                    const oName = (srcOutputs[oi].name || "").toLowerCase();
+                    for (let ii = 0; ii < dstInputs.length; ii++) {
+                        if (!tryMatch(oi, ii)) continue;
+                        const iName = (dstInputs[ii].name || "").toLowerCase();
+                        if (oName && iName && oName === iName) {
+                            results.push({ outputSlot: oi, inputSlot: ii });
+                            usedOutputs.add(oi);
+                            usedInputs.add(ii);
+                            break;
+                        }
+                    }
+                }
+
+                // Pass 1: type priority
+                for (const priorityType of TYPE_PRIORITY) {
+                    for (const oi of outputOrder) {
+                        if (outputAlreadyLinkedTo(oi, dstId)) continue;
+                        const oType = normalizeType(srcOutputs[oi].type);
+                        if (!oType.split(",").includes(priorityType)) continue;
+                        for (let ii = 0; ii < dstInputs.length; ii++) {
+                            if (!tryMatch(oi, ii)) continue;
+                            results.push({ outputSlot: oi, inputSlot: ii });
+                            usedOutputs.add(oi);
+                            usedInputs.add(ii);
+                            break;
+                        }
+                    }
+                }
+
+                // Pass 2: remaining type matches
+                for (const oi of outputOrder) {
+                    if (outputAlreadyLinkedTo(oi, dstId)) continue;
+                    for (let ii = 0; ii < dstInputs.length; ii++) {
+                        if (!tryMatch(oi, ii)) continue;
+                        results.push({ outputSlot: oi, inputSlot: ii });
+                        usedOutputs.add(oi);
+                        usedInputs.add(ii);
+                        break;
+                    }
+                }
+
+                // Pass 3: wildcard
+                for (const oi of outputOrder) {
+                    if (outputAlreadyLinkedTo(oi, dstId)) continue;
+                    const oType = normalizeType(srcOutputs[oi].type);
+                    for (let ii = 0; ii < dstInputs.length; ii++) {
+                        if (!tryMatch(oi, ii)) continue;
+                        const iType = normalizeType(dstInputs[ii].type);
+                        if (oType === "*" || iType === "*") {
+                            results.push({ outputSlot: oi, inputSlot: ii });
+                            usedOutputs.add(oi);
+                            usedInputs.add(ii);
+                            break;
+                        }
+                    }
+                }
+
+                return results;
             }
 
             function getNodeAt(graphX, graphY) {
@@ -426,15 +532,20 @@ if (app) {
                 const srcCY = state.startY;
 
                 let conn = null;
+                let conns = [];
 
                 if (dst) {
-                    conn = findBest(src, dst);
+                    if (state.connectAllMode) {
+                        conns = findAllConnections(src, dst);
+                    } else {
+                        conn = findBest(src, dst);
+                    }
                 }
 
                 const titleH = (typeof LiteGraph !== "undefined" && LiteGraph.NODE_TITLE_HEIGHT) || 20;
                 const r = NW_RADIUS;
 
-                const noMatch = dst && !conn;
+                const noMatch = dst && (state.connectAllMode ? conns.length === 0 : !conn);
 
                 function drawNodeHighlight(ctx, node, color) {
                     ctx.save();
@@ -461,10 +572,18 @@ if (app) {
 
                 if (noMatch) {
                     // No available sockets — just highlights, no noodle
-                } else if (dst && conn) {
-                    const outPos = src.getConnectionPos(false, conn.outputSlot);
-                    const inPos = dst.getConnectionPos(true, conn.inputSlot);
-                    drawNoodle(ctx, outPos[0], outPos[1], inPos[0], inPos[1], NW_COLOR, 0.8);
+                } else if (dst && (conns.length > 0 || conn)) {
+                    if (state.connectAllMode && conns.length > 0) {
+                        for (const c of conns) {
+                            const outPos = src.getConnectionPos(false, c.outputSlot);
+                            const inPos = dst.getConnectionPos(true, c.inputSlot);
+                            drawNoodle(ctx, outPos[0], outPos[1], inPos[0], inPos[1], NW_COLOR, 0.8);
+                        }
+                    } else if (conn) {
+                        const outPos = src.getConnectionPos(false, conn.outputSlot);
+                        const inPos = dst.getConnectionPos(true, conn.inputSlot);
+                        drawNoodle(ctx, outPos[0], outPos[1], inPos[0], inPos[1], NW_COLOR, 0.8);
+                    }
                 } else {
                     drawNoodle(ctx, srcCX, srcCY, state.mouseX, state.mouseY, NW_COLOR, 0.8);
                 }
@@ -493,13 +612,32 @@ if (app) {
             const canvasEl = canvas.canvas;
 
             canvasEl.addEventListener("pointerdown", (e) => {
-                if (!enabled || e.button !== 2 || !e.altKey) return;
+                if (!enabled || e.button !== 2) return;
+                if (e.ctrlKey && e.altKey) {
+                    const [gx, gy] = eventToGraph(e);
+                    const node = getNodeAt(gx, gy);
+                    if (!node) return;
+                    state.active = true;
+                    state.connectAllMode = true;
+                    state.sourceNode = node;
+                    state.startX = gx;
+                    state.startY = gy;
+                    state.mouseX = gx;
+                    state.mouseY = gy;
+                    state.targetNode = null;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    return;
+                }
+                if (!e.altKey) return;
 
                 const [gx, gy] = eventToGraph(e);
                 const node = getNodeAt(gx, gy);
                 if (!node) return;
 
                 state.active = true;
+                state.connectAllMode = false;
                 state.sourceNode = node;
                 state.startX = gx;
                 state.startY = gy;
@@ -535,15 +673,25 @@ if (app) {
 
                 if (targetNode && targetNode !== state.sourceNode) {
                     const srcNode = state.sourceNode;
-                    const conn = findBest(srcNode, targetNode);
-
-                    if (conn) {
-                        srcNode.connect(conn.outputSlot, targetNode, conn.inputSlot);
-                        if (app.graph) app.graph.change();
+                    if (state.connectAllMode) {
+                        const conns = findAllConnections(srcNode, targetNode);
+                        for (const conn of conns) {
+                            srcNode.connect(conn.outputSlot, targetNode, conn.inputSlot);
+                        }
+                        if (conns.length > 0 && app.graph) app.graph.change();
+                    } else {
+                        const conn = findBest(srcNode, targetNode);
+                        if (conn) {
+                            srcNode.connect(conn.outputSlot, targetNode, conn.inputSlot);
+                            if (app.graph) app.graph.change();
+                        }
                     }
                 }
 
+                if (canvas.deselectAllNodes) canvas.deselectAllNodes();
+
                 state.active = false;
+                state.connectAllMode = false;
                 state.sourceNode = null;
                 state.targetNode = null;
                 suppressNextContext = true;
