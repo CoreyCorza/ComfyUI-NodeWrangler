@@ -4,9 +4,10 @@ Git clone or download/drop the `ComfyUI-NodeWrangler` folder into your `ComfyUI/
 
 # ComfyUI Node Wrangler
 
-Blender-inspired keyboard shortcuts for faster node connection/disconnection in ComfyUI.
-Just a prototype at the moment - has not been extensively tested yet to handle all scenarios.
-Some bugs might be present.
+Blender-inspired keyboard shortcuts for faster node connection/disconnection in ComfyUI.  
+Just a prototype at the moment - has not been extensively tested yet to handle all scenarios  
+Some bugs might be present.  
+Doesn't work with nodes 2.0 (yet?)
 
 ## Features
 
