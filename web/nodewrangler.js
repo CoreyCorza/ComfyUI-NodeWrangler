@@ -554,6 +554,9 @@ if (app) {
                 const noMatch = dst && (state.connectAllMode ? conns.length === 0 : !conn);
 
                 function drawNodeHighlight(ctx, node, color) {
+                    const collapsed = node.flags?.collapsed;
+                    const w = collapsed ? (node._collapsed_width || node.size[0]) : node.size[0];
+                    const h = collapsed ? titleH : node.size[1] + titleH;
                     ctx.save();
                     ctx.strokeStyle = color;
                     ctx.lineWidth = 2;
@@ -564,8 +567,8 @@ if (app) {
                     ctx.roundRect(
                         node.pos[0] - 4,
                         node.pos[1] - titleH - 4,
-                        node.size[0] + 8,
-                        node.size[1] + titleH + 8,
+                        w + 8,
+                        h + 8,
                         r
                     );
                     ctx.stroke();
@@ -595,30 +598,58 @@ if (app) {
                 }
             }
 
-            // Hook into the draw loop by monkey-patching drawFrontCanvas
+            // Transparent overlay canvas drawn on top of everything (Nodes 2.0 compat)
+            const canvasEl = canvas.canvas;
+            const overlayCanvas = document.createElement("canvas");
+            overlayCanvas.style.cssText = "position:absolute;top:0;left:0;pointer-events:none;z-index:9998;";
+            const canvasParent = canvasEl.parentElement;
+            if (canvasParent) {
+                if (getComputedStyle(canvasParent).position === "static") {
+                    canvasParent.style.position = "relative";
+                }
+                canvasParent.appendChild(overlayCanvas);
+            }
+
+            function syncOverlaySize() {
+                overlayCanvas.width = canvasEl.width;
+                overlayCanvas.height = canvasEl.height;
+                overlayCanvas.style.width = canvasEl.offsetWidth + "px";
+                overlayCanvas.style.height = canvasEl.offsetHeight + "px";
+            }
+            syncOverlaySize();
+            new ResizeObserver(syncOverlaySize).observe(canvasEl);
+            const overlayCtx = overlayCanvas.getContext("2d");
+
             const origDrawFrontCanvas = canvas.drawFrontCanvas.bind(canvas);
             canvas.drawFrontCanvas = function () {
                 origDrawFrontCanvas.apply(this, arguments);
+                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
                 if (enabled && (state.active || cutState.active)) {
-                    const ctx = this.ctx || (this.bgcanvas && this.bgcanvas.getContext("2d"));
-                    if (ctx) {
-                        ctx.save();
-                        const ds = this.ds;
-                        if (ds) {
-                            ctx.setTransform(ds.scale, 0, 0, ds.scale, ds.offset[0] * ds.scale, ds.offset[1] * ds.scale);
-                        }
-                        if (state.active) drawOverlay(ctx);
-                        if (cutState.active) drawCutOverlay(ctx);
-                        ctx.restore();
+                    overlayCtx.save();
+                    const ds = this.ds;
+                    if (ds) {
+                        overlayCtx.setTransform(ds.scale, 0, 0, ds.scale, ds.offset[0] * ds.scale, ds.offset[1] * ds.scale);
                     }
+                    if (state.active) drawOverlay(overlayCtx);
+                    if (cutState.active) drawCutOverlay(overlayCtx);
+                    overlayCtx.restore();
                 }
             };
 
-            // Intercept right mouse button events at the canvas level
-            const canvasEl = canvas.canvas;
+            function isOverCanvas(e) {
+                const rect = canvasEl.getBoundingClientRect();
+                return e.clientX >= rect.left && e.clientX <= rect.right &&
+                       e.clientY >= rect.top && e.clientY <= rect.bottom;
+            }
 
-            canvasEl.addEventListener("pointerdown", (e) => {
-                if (!enabled || e.button !== 2) return;
+            function killEvent(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }
+
+            window.addEventListener("pointerdown", (e) => {
+                if (!enabled || e.button !== 2 || !isOverCanvas(e)) return;
                 if (e.ctrlKey && e.altKey) {
                     const [gx, gy] = eventToGraph(e);
                     const node = getNodeAt(gx, gy);
@@ -631,9 +662,7 @@ if (app) {
                     state.mouseX = gx;
                     state.mouseY = gy;
                     state.targetNode = null;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
+                    killEvent(e);
                     return;
                 }
                 if (!e.altKey) return;
@@ -651,12 +680,10 @@ if (app) {
                 state.mouseY = gy;
                 state.targetNode = null;
 
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
+                killEvent(e);
             }, true);
 
-            canvasEl.addEventListener("pointermove", (e) => {
+            window.addEventListener("pointermove", (e) => {
                 if (!state.active) return;
 
                 const [gx, gy] = eventToGraph(e);
@@ -667,11 +694,10 @@ if (app) {
                 state.targetNode = (node && node !== state.sourceNode) ? node : null;
 
                 canvas.setDirty(true, true);
-                e.preventDefault();
-                e.stopPropagation();
+                killEvent(e);
             }, true);
 
-            canvasEl.addEventListener("pointerup", (e) => {
+            window.addEventListener("pointerup", (e) => {
                 if (!state.active || e.button !== 2) return;
 
                 const [gx, gy] = eventToGraph(e);
@@ -705,37 +731,32 @@ if (app) {
                 suppressNextContext = true;
                 canvas.setDirty(true, true);
 
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
+                killEvent(e);
             }, true);
 
             // --- Ctrl+RMB cut handlers ---
 
-            canvasEl.addEventListener("pointerdown", (e) => {
-                if (!enabled || e.button !== 2 || !e.ctrlKey || e.altKey) return;
+            window.addEventListener("pointerdown", (e) => {
+                if (!enabled || e.button !== 2 || !e.ctrlKey || e.altKey || !isOverCanvas(e)) return;
 
                 const [gx, gy] = eventToGraph(e);
                 cutState.active = true;
                 cutState.points = [[gx, gy]];
 
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
+                killEvent(e);
             }, true);
 
-            canvasEl.addEventListener("pointermove", (e) => {
+            window.addEventListener("pointermove", (e) => {
                 if (!cutState.active) return;
 
                 const [gx, gy] = eventToGraph(e);
                 cutState.points.push([gx, gy]);
 
                 canvas.setDirty(true, true);
-                e.preventDefault();
-                e.stopPropagation();
+                killEvent(e);
             }, true);
 
-            canvasEl.addEventListener("pointerup", (e) => {
+            window.addEventListener("pointerup", (e) => {
                 if (!cutState.active || e.button !== 2) return;
 
                 const [gx, gy] = eventToGraph(e);
@@ -748,19 +769,15 @@ if (app) {
                 suppressNextContext = true;
                 canvas.setDirty(true, true);
 
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
+                killEvent(e);
             }, true);
 
             // Suppress context menu when wrangler was used
             let suppressNextContext = false;
-            canvasEl.addEventListener("contextmenu", (e) => {
+            window.addEventListener("contextmenu", (e) => {
                 if (state.active || cutState.active || suppressNextContext) {
                     suppressNextContext = false;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
+                    killEvent(e);
                 }
             }, true);
         },
