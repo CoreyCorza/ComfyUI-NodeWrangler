@@ -4,12 +4,12 @@ Git clone `ComfyUI-NodeWrangler` to your `ComfyUI/custom_nodes/` directory and r
 
 # ComfyUI Node Wrangler
 
-Blender-inspired keyboard shortcuts for faster node connection/disconnection in ComfyUI.  
-Just a prototype at the moment - has not been extensively tested yet.  
-Some bugs might be present.  
-Doesn't work with nodes 2.0 (yet?)  
-  
-Note: Like with Blenders nodewrangler, you'll find situations where you just have to join something manually.  
+Blender-inspired keyboard shortcuts for faster node connection/disconnection in ComfyUI. 
+Just a prototype at the moment - has not been extensively tested yet. 
+Some bugs might be present. 
+Doesn't work with nodes 2.0 (yet?) 
+ 
+Note: Like with Blenders nodewrangler, you'll find situations where you just have to join something manually. 
 Its fairly time consuming to cover literally every possible combination of when something should or not connect.
 Aside of having to do a manual connection here and there, this at least speeds things up for most scenarios.
 
@@ -78,21 +78,22 @@ The top of `web/nodewrangler.js` has variables you can tweak:
 - If there are multiple input sockets on the target node and you want to connect to a certain one, auto-detect which socket is closest to mouse.
 
 ## Update Log
-### 17/02/2026  
-Tweak: Single output vs multi output [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/8adaa0fd46755bbab55356a847fad00398247caf)  
-Needed to handle a single output being able to connect to multiple other nodes  
-But also handle multiple outputs needing to connect to multiple nodes  
+### 17/02/2026 
+Tweak: Single output vs multi output [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/8adaa0fd46755bbab55356a847fad00398247caf) 
+Needed to handle a single output being able to connect to multiple other nodes 
+But also handle multiple outputs needing to connect to multiple nodes 
 Will it affect anything else? Not sure.. seems ok.
 
 https://github.com/user-attachments/assets/15e83772-0739-46f4-a20c-7c03aac7acfb
 
 ### 17/02/2026
-Feature: Multi connect similar sockets using ctrl+alt+rightmouse [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/e6fb2cf0e97b021bf53f12abc324e3061fc85c73)  
-Handles connecting multiple sockets simutaneously which meet connection criteria.  
-Also added deselect nodes when operation finishes, to workaround comfyui's natively bound ctrl+select which annoyingly causes nodes to become selected.  
+Feature: Multi connect similar sockets using ctrl+alt+rightmouse [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/e6fb2cf0e97b021bf53f12abc324e3061fc85c73) 
+Handles connecting multiple sockets simutaneously which meet connection criteria. 
+Also added deselect nodes when operation finishes, to workaround comfyui's natively bound ctrl+select which annoyingly causes nodes to become selected. 
 
 https://github.com/user-attachments/assets/25dd2581-83f9-46e3-b3e5-18c29b28c602
 
 
-
-
+### 19/07/2026
+Tweak: Subgraph compatibility [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/fe874922053dab3d82e367085dc017cd01f49736)
+Using app.graph to obtain the correct active layer
