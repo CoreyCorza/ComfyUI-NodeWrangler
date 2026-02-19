@@ -6,12 +6,17 @@
 const NW_COLOR = "#5B9DF0";
 const NW_GLOW = 12;
 const NW_RADIUS = 12;
-const NW_DOT = 4;
+const NW_DOT = 6;
 const NW_NO_MATCH_COLOR = "#E85050";
 const NW_CUT_COLOR = "#E85050";
 const NW_BUTTON_COLOR = "rgb(93, 178, 235)";
 const NW_BUTTON_OFF_COLOR = "#666";
 const NW_STORAGE_KEY = "comfy-nodewrangler-enabled";
+// Nodes 2.0 socket position corrections
+const NW_V2_OFFSET_Y = 9;
+const NW_V2_OFFSET_X = -10;
+const NW_V2_SLOT_SPACING = 4;
+
 
 let app;
 try {
@@ -358,6 +363,20 @@ if (app) {
                 return canvas.graph || app.graph;
             }
 
+            function isNodesV2() {
+                try { return !!app.ui.settings.getSettingValue('Comfy.VueNodes.Enabled'); } catch (_) {}
+                return false;
+            }
+
+            function getSlotPos(node, isOutput, slotIdx) {
+                const pos = node.getConnectionPos(isOutput, slotIdx);
+                if (pos && isNodesV2()) {
+                    pos[1] += NW_V2_OFFSET_Y + (slotIdx * NW_V2_SLOT_SPACING);
+                    pos[0] += isOutput ? NW_V2_OFFSET_X : -NW_V2_OFFSET_X;
+                }
+                return pos;
+            }
+
             function getNodeAt(graphX, graphY) {
                 const graph = getActiveGraph();
                 if (!graph) return null;
@@ -490,8 +509,8 @@ if (app) {
                     const targetNode = graph.getNodeById(link.target_id);
                     if (!originNode || !targetNode) continue;
 
-                    const outPos = originNode.getConnectionPos(false, link.origin_slot);
-                    const inPos = targetNode.getConnectionPos(true, link.target_slot);
+                    const outPos = getSlotPos(originNode, false, link.origin_slot);
+                    const inPos = getSlotPos(targetNode, true, link.target_slot);
                     if (!outPos || !inPos) continue;
 
                     if (cutIntersectsLink(cutPoints, outPos[0], outPos[1], inPos[0], inPos[1])) {
@@ -565,10 +584,10 @@ if (app) {
                     ctx.shadowBlur = NW_GLOW;
                     ctx.beginPath();
                     ctx.roundRect(
-                        node.pos[0] - 0,
-                        node.pos[1] - titleH - 0,
-                        w + 0,
-                        h + 0,
+                        node.pos[0],
+                        node.pos[1] - titleH,
+                        w,
+                        h,
                         r
                     );
                     ctx.stroke();
@@ -584,13 +603,13 @@ if (app) {
                 } else if (dst && (conns.length > 0 || conn)) {
                     if (state.connectAllMode && conns.length > 0) {
                         for (const c of conns) {
-                            const outPos = src.getConnectionPos(false, c.outputSlot);
-                            const inPos = dst.getConnectionPos(true, c.inputSlot);
+                            const outPos = getSlotPos(src, false, c.outputSlot);
+                            const inPos = getSlotPos(dst, true, c.inputSlot);
                             drawNoodle(ctx, outPos[0], outPos[1], inPos[0], inPos[1], NW_COLOR, 0.8);
                         }
                     } else if (conn) {
-                        const outPos = src.getConnectionPos(false, conn.outputSlot);
-                        const inPos = dst.getConnectionPos(true, conn.inputSlot);
+                        const outPos = getSlotPos(src, false, conn.outputSlot);
+                        const inPos = getSlotPos(dst, true, conn.inputSlot);
                         drawNoodle(ctx, outPos[0], outPos[1], inPos[0], inPos[1], NW_COLOR, 0.8);
                     }
                 } else {
@@ -601,6 +620,7 @@ if (app) {
             // Transparent overlay canvas drawn on top of everything (Nodes 2.0 compat)
             const canvasEl = canvas.canvas;
             const overlayCanvas = document.createElement("canvas");
+            overlayCanvas.dataset.nwOverlay = "1";
             overlayCanvas.style.cssText = "position:absolute;top:0;left:0;pointer-events:none;z-index:9998;";
             const canvasParent = canvasEl.parentElement;
             if (canvasParent) {
