@@ -99,5 +99,5 @@ Using app.graph to obtain the correct node layer.
 
 Feat: Nodes2.0 compatibility  [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/550e9d14d21c38ed8f10536fbbff9c0e34b36af5)  
 Event listeners moved to window for nodes2.0.   
-Tweak: Transparent layer to move overlays up in the z-index draw order
-Tweak: Correct borders for collapsed nodes
+Tweak: Transparent layer to move overlays up in the z-index draw order.  
+Tweak: Correct borders for collapsed nodes.  
