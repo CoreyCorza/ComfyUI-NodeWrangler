@@ -86,7 +86,6 @@ Will it affect anything else? Not sure.. seems ok.
 
 https://github.com/user-attachments/assets/15e83772-0739-46f4-a20c-7c03aac7acfb
 
-### 17/02/2026
 Feature: Multi connect similar sockets using ctrl+alt+rightmouse [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/e6fb2cf0e97b021bf53f12abc324e3061fc85c73) 
 Handles connecting multiple sockets simutaneously which meet connection criteria. 
 Also added deselect nodes when operation finishes, to workaround comfyui's natively bound ctrl+select which annoyingly causes nodes to become selected. 
@@ -96,4 +95,9 @@ https://github.com/user-attachments/assets/25dd2581-83f9-46e3-b3e5-18c29b28c602
 
 ### 19/07/2026
 Tweak: Subgraph compatibility [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/fe874922053dab3d82e367085dc017cd01f49736)  
-Using app.graph to obtain the correct active layer  
+Using app.graph to obtain the correct node layer.  
+
+Feat: Nodes2.0 compatibility  [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/550e9d14d21c38ed8f10536fbbff9c0e34b36af5)  
+Event listeners moved to window for nodes2.0.   
+Tweak: Transparent layer to move overlays up in the z-index draw order
+Tweak: Correct borders for collapsed nodes
