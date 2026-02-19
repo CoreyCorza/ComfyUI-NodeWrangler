@@ -117,9 +117,10 @@ if (app) {
                 // Check if a specific output is already linked to the target node
                 function outputAlreadyLinkedTo(oi, targetId) {
                     const links = srcOutputs[oi].links;
-                    if (!links || !app.graph) return false;
+                    const graph = getActiveGraph();
+                    if (!links || !graph) return false;
                     for (const linkId of links) {
-                        const link = app.graph.links[linkId];
+                        const link = graph.links[linkId];
                         if (link && link.target_id === targetId) return true;
                     }
                     return false;
@@ -257,9 +258,10 @@ if (app) {
 
                 function outputAlreadyLinkedTo(oi, targetId) {
                     const links = srcOutputs[oi].links;
-                    if (!links || !app.graph) return false;
+                    const graph = getActiveGraph();
+                    if (!links || !graph) return false;
                     for (const linkId of links) {
-                        const link = app.graph.links[linkId];
+                        const link = graph.links[linkId];
                         if (link && link.target_id === targetId) return true;
                     }
                     return false;
@@ -352,8 +354,12 @@ if (app) {
                 return results;
             }
 
+            function getActiveGraph() {
+                return canvas.graph || app.graph;
+            }
+
             function getNodeAt(graphX, graphY) {
-                const graph = app.graph;
+                const graph = getActiveGraph();
                 if (!graph) return null;
                 return graph.getNodeOnPos(graphX, graphY, graph._nodes_in_order) || null;
             }
@@ -471,7 +477,7 @@ if (app) {
 
             // Find all links intersected by the cut path and disconnect them
             function performCut(cutPoints) {
-                const graph = app.graph;
+                const graph = getActiveGraph();
                 if (!graph || !graph.links || cutPoints.length < 2) return;
 
                 const toDisconnect = [];
@@ -678,12 +684,14 @@ if (app) {
                         for (const conn of conns) {
                             srcNode.connect(conn.outputSlot, targetNode, conn.inputSlot);
                         }
-                        if (conns.length > 0 && app.graph) app.graph.change();
+                        const graph = getActiveGraph();
+                        if (conns.length > 0 && graph) graph.change();
                     } else {
                         const conn = findBest(srcNode, targetNode);
                         if (conn) {
                             srcNode.connect(conn.outputSlot, targetNode, conn.inputSlot);
-                            if (app.graph) app.graph.change();
+                            const graph = getActiveGraph();
+                            if (graph) graph.change();
                         }
                     }
                 }
