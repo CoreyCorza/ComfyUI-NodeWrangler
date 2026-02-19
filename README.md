@@ -95,5 +95,5 @@ https://github.com/user-attachments/assets/25dd2581-83f9-46e3-b3e5-18c29b28c602
 
 
 ### 19/07/2026
-Tweak: Subgraph compatibility [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/fe874922053dab3d82e367085dc017cd01f49736)
-Using app.graph to obtain the correct active layer
+Tweak: Subgraph compatibility [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/fe874922053dab3d82e367085dc017cd01f49736)  
+Using app.graph to obtain the correct active layer  
