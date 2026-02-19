@@ -5,9 +5,9 @@
 
 const NW_COLOR = "#5B9DF0";
 const NW_GLOW = 12;
-const NW_RADIUS = 10;
+const NW_RADIUS = 12;
 const NW_DOT = 4;
-const NW_NO_MATCH_COLOR = "#E8A035";
+const NW_NO_MATCH_COLOR = "#E85050";
 const NW_CUT_COLOR = "#E85050";
 const NW_BUTTON_COLOR = "rgb(93, 178, 235)";
 const NW_BUTTON_OFF_COLOR = "#666";
@@ -565,10 +565,10 @@ if (app) {
                     ctx.shadowBlur = NW_GLOW;
                     ctx.beginPath();
                     ctx.roundRect(
-                        node.pos[0] - 4,
-                        node.pos[1] - titleH - 4,
-                        w + 8,
-                        h + 8,
+                        node.pos[0] - 0,
+                        node.pos[1] - titleH - 0,
+                        w + 0,
+                        h + 0,
                         r
                     );
                     ctx.stroke();
