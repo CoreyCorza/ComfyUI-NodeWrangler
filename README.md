@@ -71,7 +71,7 @@ The top of `web/nodewrangler.js` has variables you can tweak:
 
 
 ## Todo
-- Subgraph compatibility
+- ~~Subgraph compatibility~~
 - If there are multiple input sockets on the target node and you want to connect to a certain one, auto-detect which socket is closest to mouse.
 
 ## Update Log
