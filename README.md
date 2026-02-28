@@ -83,7 +83,7 @@ Will it affect anything else? Not sure.. seems ok.
 
 https://github.com/user-attachments/assets/15e83772-0739-46f4-a20c-7c03aac7acfb  
 
-Feature: Multi connect similar sockets using ctrl+alt+rightmouse [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/  e6fb2cf0e97b021bf53f12abc324e3061fc85c73)   
+Feature: Multi connect similar sockets using ctrl+alt+rightmouse [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/e6fb2cf0e97b021bf53f12abc324e3061fc85c73)   
 Handles connecting multiple sockets simutaneously which meet connection criteria.   
 Also added deselect nodes when operation finishes, to workaround comfyui's natively bound ctrl+select which annoyingly causes nodes to become selected.   
 
