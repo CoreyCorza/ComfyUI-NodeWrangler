@@ -98,3 +98,10 @@ Feat: Nodes2.0 compatibility  [commit](https://github.com/CoreyCorza/ComfyUI-Nod
 Event listeners moved to window for nodes2.0.   
 Tweak: Transparent layer to move overlays up in the z-index draw order.  
 Tweak: Correct borders for collapsed nodes.  
+
+### 28/02/2026
+Fix: DPI system scaling [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/686d296cf1fcbad1e5478c38de40d99f64227273)  
+Fixed an issue where setting OS system scaling would cause offset in node coords and drawing  
+getBoundingClientRect() – DOM API  
+clientX / clientY – event properties  
+canvas.width / canvas.height vs rect.width / rect.height – canvas dimensions  
