@@ -383,14 +383,17 @@ if (app) {
                 return graph.getNodeOnPos(graphX, graphY, graph._nodes_in_order) || null;
             }
 
-            function eventToGraph(e) {
+            function eventToGraph(e, forHitTest) {
                 if (canvas.convertEventToCanvasOffset) {
                     const pos = canvas.convertEventToCanvasOffset(e);
                     return [pos[0], pos[1]];
                 }
                 const rect = canvas.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                const scaleX = canvas.canvas.width / rect.width;
+                const scaleY = canvas.canvas.height / rect.height;
+                const needsDpiFix = (Math.abs(scaleX - 1) > 0.01 || Math.abs(scaleY - 1) > 0.01) && forHitTest;
+                const x = (e.clientX - rect.left) * (needsDpiFix ? scaleX : 1);
+                const y = (e.clientY - rect.top) * (needsDpiFix ? scaleY : 1);
                 const ds = canvas.ds;
                 return [
                     x / ds.scale - ds.offset[0],
@@ -648,7 +651,11 @@ if (app) {
                     overlayCtx.save();
                     const ds = this.ds;
                     if (ds) {
-                        overlayCtx.setTransform(ds.scale, 0, 0, ds.scale, ds.offset[0] * ds.scale, ds.offset[1] * ds.scale);
+                        const dpr = Math.max(canvasEl.width / canvasEl.offsetWidth || 1, canvasEl.height / canvasEl.offsetHeight || 1, 1);
+                        overlayCtx.setTransform(
+                            ds.scale * dpr, 0, 0, ds.scale * dpr,
+                            ds.offset[0] * ds.scale * dpr, ds.offset[1] * ds.scale * dpr
+                        );
                     }
                     if (state.active) drawOverlay(overlayCtx);
                     if (cutState.active) drawCutOverlay(overlayCtx);
@@ -671,9 +678,10 @@ if (app) {
             window.addEventListener("pointerdown", (e) => {
                 if (!enabled || e.button !== 2 || !isOverCanvas(e)) return;
                 if (e.ctrlKey && e.altKey) {
-                    const [gx, gy] = eventToGraph(e);
-                    const node = getNodeAt(gx, gy);
+                    const [gxHit, gyHit] = eventToGraph(e, true);
+                    const node = getNodeAt(gxHit, gyHit);
                     if (!node) return;
+                    const [gx, gy] = eventToGraph(e, false);
                     state.active = true;
                     state.connectAllMode = true;
                     state.sourceNode = node;
@@ -687,10 +695,11 @@ if (app) {
                 }
                 if (!e.altKey) return;
 
-                const [gx, gy] = eventToGraph(e);
-                const node = getNodeAt(gx, gy);
+                const [gxHit, gyHit] = eventToGraph(e, true);
+                const node = getNodeAt(gxHit, gyHit);
                 if (!node) return;
 
+                const [gx, gy] = eventToGraph(e, false);
                 state.active = true;
                 state.connectAllMode = false;
                 state.sourceNode = node;
@@ -706,11 +715,12 @@ if (app) {
             window.addEventListener("pointermove", (e) => {
                 if (!state.active) return;
 
-                const [gx, gy] = eventToGraph(e);
+                const [gx, gy] = eventToGraph(e, false);
                 state.mouseX = gx;
                 state.mouseY = gy;
 
-                const node = getNodeAt(gx, gy);
+                const [gxHit, gyHit] = eventToGraph(e, true);
+                const node = getNodeAt(gxHit, gyHit);
                 state.targetNode = (node && node !== state.sourceNode) ? node : null;
 
                 canvas.setDirty(true, true);
@@ -720,8 +730,8 @@ if (app) {
             window.addEventListener("pointerup", (e) => {
                 if (!state.active || e.button !== 2) return;
 
-                const [gx, gy] = eventToGraph(e);
-                const targetNode = getNodeAt(gx, gy);
+                const [gxHit, gyHit] = eventToGraph(e, true);
+                const targetNode = getNodeAt(gxHit, gyHit);
 
                 if (targetNode && targetNode !== state.sourceNode) {
                     const srcNode = state.sourceNode;
@@ -759,7 +769,7 @@ if (app) {
             window.addEventListener("pointerdown", (e) => {
                 if (!enabled || e.button !== 2 || !e.ctrlKey || e.altKey || !isOverCanvas(e)) return;
 
-                const [gx, gy] = eventToGraph(e);
+                const [gx, gy] = eventToGraph(e, false);
                 cutState.active = true;
                 cutState.points = [[gx, gy]];
 
@@ -769,7 +779,7 @@ if (app) {
             window.addEventListener("pointermove", (e) => {
                 if (!cutState.active) return;
 
-                const [gx, gy] = eventToGraph(e);
+                const [gx, gy] = eventToGraph(e, false);
                 cutState.points.push([gx, gy]);
 
                 canvas.setDirty(true, true);
@@ -779,7 +789,7 @@ if (app) {
             window.addEventListener("pointerup", (e) => {
                 if (!cutState.active || e.button !== 2) return;
 
-                const [gx, gy] = eventToGraph(e);
+                const [gx, gy] = eventToGraph(e, false);
                 cutState.points.push([gx, gy]);
 
                 performCut(cutState.points);
