@@ -669,6 +669,11 @@ if (app) {
                        e.clientY >= rect.top && e.clientY <= rect.bottom;
             }
 
+            function isMaskEditorOpen() {
+                return !!document.querySelector(".maskEditor_toolPanelContainer") ||
+                       !!document.querySelector("#maskEditor_brush");
+            }
+
             function killEvent(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -676,7 +681,7 @@ if (app) {
             }
 
             window.addEventListener("pointerdown", (e) => {
-                if (!enabled || e.button !== 2 || !isOverCanvas(e)) return;
+                if (!enabled || e.button !== 2 || !isOverCanvas(e) || isMaskEditorOpen()) return;
                 if (e.ctrlKey && e.altKey) {
                     const [gxHit, gyHit] = eventToGraph(e, true);
                     const node = getNodeAt(gxHit, gyHit);
@@ -767,7 +772,7 @@ if (app) {
             // --- Ctrl+RMB cut handlers ---
 
             window.addEventListener("pointerdown", (e) => {
-                if (!enabled || e.button !== 2 || !e.ctrlKey || e.altKey || !isOverCanvas(e)) return;
+                if (!enabled || e.button !== 2 || !e.ctrlKey || e.altKey || !isOverCanvas(e) || isMaskEditorOpen()) return;
 
                 const [gx, gy] = eventToGraph(e, false);
                 cutState.active = true;
