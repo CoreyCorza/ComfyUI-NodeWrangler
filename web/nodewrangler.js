@@ -145,56 +145,67 @@ if (app) {
 
                 const dstId = dstNode.id;
 
-                // Pass 0: name + type match (prefer slots with matching names)
-                for (const oi of outputOrder) {
-                    if (outputAlreadyLinkedTo(oi, dstId)) continue;
-                    const oName = (srcOutputs[oi].name || "").toLowerCase();
+                // Prefer free (unconnected) slots first, then occupied ones
+                function slotIsFree(ii) { return dstInputs[ii].link == null; }
 
-                    for (let ii = 0; ii < dstInputs.length; ii++) {
-                        if (dstInputs[ii].link != null) continue;
-                        const iName = (dstInputs[ii].name || "").toLowerCase();
-                        if (oName && iName && oName === iName && typesMatch(srcOutputs[oi].type, dstInputs[ii].type)) {
+                // Pass 0: name + type match (prefer slots with matching names), free slots first
+                for (const free of [true, false]) {
+                    for (const oi of outputOrder) {
+                        if (outputAlreadyLinkedTo(oi, dstId)) continue;
+                        const oName = (srcOutputs[oi].name || "").toLowerCase();
+
+                        for (let ii = 0; ii < dstInputs.length; ii++) {
+                            if (slotIsFree(ii) !== free) continue;
+                            const iName = (dstInputs[ii].name || "").toLowerCase();
+                            if (oName && iName && oName === iName && typesMatch(srcOutputs[oi].type, dstInputs[ii].type)) {
+                                return { outputSlot: oi, inputSlot: ii };
+                            }
+                        }
+                    }
+                }
+
+                // Pass 1: type matches, ordered by type priority, free slots first
+                for (const free of [true, false]) {
+                    for (const priorityType of TYPE_PRIORITY) {
+                        for (const oi of outputOrder) {
+                            if (outputAlreadyLinkedTo(oi, dstId)) continue;
+                            const oType = normalizeType(srcOutputs[oi].type);
+                            if (!oType.split(",").includes(priorityType)) continue;
+
+                            for (let ii = 0; ii < dstInputs.length; ii++) {
+                                if (slotIsFree(ii) !== free) continue;
+                                if (!typesMatch(oType, dstInputs[ii].type)) continue;
+                                return { outputSlot: oi, inputSlot: ii };
+                            }
+                        }
+                    }
+                }
+
+                // Pass 2: remaining matches not in priority list, free slots first
+                for (const free of [true, false]) {
+                    for (const oi of outputOrder) {
+                        if (outputAlreadyLinkedTo(oi, dstId)) continue;
+
+                        for (let ii = 0; ii < dstInputs.length; ii++) {
+                            if (slotIsFree(ii) !== free) continue;
+                            if (!typesMatch(srcOutputs[oi].type, dstInputs[ii].type)) continue;
                             return { outputSlot: oi, inputSlot: ii };
                         }
                     }
                 }
 
-                // Pass 1: type matches, ordered by type priority
-                for (const priorityType of TYPE_PRIORITY) {
+                // Pass 3: wildcard matches (one side is *), free slots first
+                for (const free of [true, false]) {
                     for (const oi of outputOrder) {
                         if (outputAlreadyLinkedTo(oi, dstId)) continue;
                         const oType = normalizeType(srcOutputs[oi].type);
-                        if (!oType.split(",").includes(priorityType)) continue;
 
                         for (let ii = 0; ii < dstInputs.length; ii++) {
-                            if (dstInputs[ii].link != null) continue;
-                            if (!typesMatch(oType, dstInputs[ii].type)) continue;
-                            return { outputSlot: oi, inputSlot: ii };
-                        }
-                    }
-                }
-
-                // Pass 2: remaining matches not in priority list
-                for (const oi of outputOrder) {
-                    if (outputAlreadyLinkedTo(oi, dstId)) continue;
-
-                    for (let ii = 0; ii < dstInputs.length; ii++) {
-                        if (dstInputs[ii].link != null) continue;
-                        if (!typesMatch(srcOutputs[oi].type, dstInputs[ii].type)) continue;
-                        return { outputSlot: oi, inputSlot: ii };
-                    }
-                }
-
-                // Pass 3: wildcard matches (one side is *)
-                for (const oi of outputOrder) {
-                    if (outputAlreadyLinkedTo(oi, dstId)) continue;
-                    const oType = normalizeType(srcOutputs[oi].type);
-
-                    for (let ii = 0; ii < dstInputs.length; ii++) {
-                        if (dstInputs[ii].link != null) continue;
-                        const iType = normalizeType(dstInputs[ii].type);
-                        if (oType === "*" || iType === "*") {
-                            return { outputSlot: oi, inputSlot: ii };
+                            if (slotIsFree(ii) !== free) continue;
+                            const iType = normalizeType(dstInputs[ii].type);
+                            if (oType === "*" || iType === "*") {
+                                return { outputSlot: oi, inputSlot: ii };
+                            }
                         }
                     }
                 }
@@ -292,7 +303,6 @@ if (app) {
                     if (usedOutputs.has(oi)) return false;
                     if (outputAlreadyLinkedTo(oi, dstId)) return false;
                     if (usedInputs.has(ii)) return false;
-                    if (dstInputs[ii].link != null) return false;
                     if (!typesMatch(srcOutputs[oi].type, dstInputs[ii].type)) return false;
                     return true;
                 }
@@ -743,6 +753,9 @@ if (app) {
                     if (state.connectAllMode) {
                         const conns = findAllConnections(srcNode, targetNode);
                         for (const conn of conns) {
+                            if (targetNode.inputs[conn.inputSlot].link != null) {
+                                targetNode.disconnectInput(conn.inputSlot);
+                            }
                             srcNode.connect(conn.outputSlot, targetNode, conn.inputSlot);
                         }
                         const graph = getActiveGraph();
@@ -750,6 +763,9 @@ if (app) {
                     } else {
                         const conn = findBest(srcNode, targetNode);
                         if (conn) {
+                            if (targetNode.inputs[conn.inputSlot].link != null) {
+                                targetNode.disconnectInput(conn.inputSlot);
+                            }
                             srcNode.connect(conn.outputSlot, targetNode, conn.inputSlot);
                             const graph = getActiveGraph();
                             if (graph) graph.change();
