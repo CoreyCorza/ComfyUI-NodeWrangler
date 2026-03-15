@@ -105,3 +105,9 @@ Fixed an issue where setting OS system scaling would cause offset in node coords
 getBoundingClientRect() – DOM API  
 clientX / clientY – event properties  
 canvas.width / canvas.height vs rect.width / rect.height – canvas dimensions  
+
+### 15/03/2026  
+Tweak: Allow connection override [commit](https://github.com/CoreyCorza/ComfyUI-NodeWrangler/commit/3bc3f71baf3c649bf36b9e32f808ab15018bc119)  
+Allow automatically overriding a connection instead of having to disconnect first
+
+
