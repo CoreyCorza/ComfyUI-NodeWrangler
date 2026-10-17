@@ -4,7 +4,7 @@ Git clone to your `ComfyUI/custom_nodes/` directory and restart ComfyUI.
 
 # ComfyUI Node Wrangler
 
-Blender-inspired keyboard shortcuts for faster node connection/disconnection in ComfyUI. 
+Blender inspired Node Wrangler for faster node connection/disconnection in ComfyUI. 
 
 
 ---
