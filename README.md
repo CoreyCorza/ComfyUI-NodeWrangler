@@ -9,7 +9,7 @@ Blender-inspired keyboard shortcuts for faster node connection/disconnection in 
 
 ---
 
-### alt + right mouse button: connect nodes
+### alt + right mouse button drag: connect nodes
 https://github.com/user-attachments/assets/0443b0f7-a1db-4d05-b2e7-bae9fa5f3836
 
 
