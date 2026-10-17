@@ -46,6 +46,10 @@ Hold **Ctrl**, **Alt** and **right-click drag** from one node to another to conn
 
 ### Ctrl + Alt + Shift + Right Mouse Button — Connect All and Hide
 
+https://github.com/user-attachments/assets/27105b50-a6c1-4b1d-9f1f-27ac55d5f9f9
+
+
+
 Hold **Ctrl**, **Alt**, and **Shift**, then **right-click drag** from one node to another to connect all matching sockets and immediately hide the new links using ComfyUI's native endpoint badges.
 
 - Uses the same socket matching as Ctrl + Alt + right-drag.
@@ -67,6 +71,10 @@ https://github.com/user-attachments/assets/cef28732-9def-4ff8-946a-7ec19c6c1b25
 ### Shift + Right Mouse Button — Hide Connections
 
 Hold **Shift** and **right-click drag** across links to hide them using ComfyUI's native endpoint badges.
+
+https://github.com/user-attachments/assets/d830236f-32fb-4357-9f82-1073dde34722
+
+
 
 - Hide multiple links in one swipe without disconnecting them.
 - A dashed gold line shows the swipe path; links hide when you release the mouse button.
