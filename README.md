@@ -44,6 +44,14 @@ Hold **Ctrl**, **Alt** and **right-click drag** from one node to another to conn
 - If there's nothing to connect, both nodes show an orange highlight.
 - While dragging, preview noodles show exactly which sockets will be connected.
 
+### Ctrl + Alt + Shift + Right Mouse Button — Connect All and Hide
+
+Hold **Ctrl**, **Alt**, and **Shift**, then **right-click drag** from one node to another to connect all matching sockets and immediately hide the new links using ComfyUI's native endpoint badges.
+
+- Uses the same socket matching as Ctrl + Alt + right-drag.
+- Only newly created connections are hidden; existing connections are skipped.
+- Requires a ComfyUI frontend with the native **Hide Link** feature.
+
 ### Ctrl + Right Mouse Button — Cut Connections
 
 Hold **Ctrl** and **right-click drag** to draw a slash across noodles to disconnect them.
@@ -55,6 +63,16 @@ https://github.com/user-attachments/assets/cef28732-9def-4ff8-946a-7ec19c6c1b25
 - Any noodle your slash line crosses gets removed.
 - Cut multiple noodles in a single drag.
 - A dashed red line shows the cut path as you drag.
+
+### Shift + Right Mouse Button — Hide Connections
+
+Hold **Shift** and **right-click drag** across links to hide them using ComfyUI's native endpoint badges.
+
+- Hide multiple links in one swipe without disconnecting them.
+- A dashed gold line shows the swipe path; links hide when you release the mouse button.
+- Uses rendered link paths, including reroutes. Crossing a shared reroute segment hides its links.
+- Right-click a hidden link's badge and choose **Show Link** to reveal it again.
+- Requires a ComfyUI frontend with the native **Hide Link** feature.
 
 ## Configuration
 
@@ -68,6 +86,7 @@ The top of `web/nodewrangler.js` has variables you can tweak:
 | `NW_DOT` | `4` | Size of the dots at each end of the preview noodle |
 | `NW_NO_MATCH_COLOR` | `#E8A035` | Highlight color when no sockets are available |
 | `NW_CUT_COLOR` | `#E85050` | Color of the cut slash line |
+| `NW_HIDE_COLOR` | `#D6AA50` | Color of the hide swipe line |
 
 
 ## Todo

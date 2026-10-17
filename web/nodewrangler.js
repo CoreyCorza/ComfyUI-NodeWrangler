@@ -1,7 +1,9 @@
 // CRZ Node Wrangler - Blender-style node connection shortcuts
 // Alt + RMB drag: connect nodes (one socket pair per drag)
 // Ctrl + Alt + RMB drag: connect all matching sockets at once
+// Ctrl + Alt + Shift + RMB drag: connect all matching sockets and hide the links
 // Ctrl + RMB drag: cut noodles by slashing across them
+// Shift + RMB drag: hide noodles using native link badges
 
 const NW_COLOR = "#5B9DF0";
 const NW_GLOW = 12;
@@ -9,6 +11,7 @@ const NW_RADIUS = 12;
 const NW_DOT = 6;
 const NW_NO_MATCH_COLOR = "#E85050";
 const NW_CUT_COLOR = "#E85050";
+const NW_HIDE_COLOR = "#D6AA50";
 const NW_BUTTON_COLOR = "rgb(93, 178, 235)";
 const NW_BUTTON_OFF_COLOR = "#666";
 const NW_STORAGE_KEY = "comfy-nodewrangler-enabled";
@@ -46,11 +49,14 @@ if (app) {
                 mouseY: 0,
                 targetNode: null,
                 connectAllMode: false,
+                hideConnections: false,
             };
 
             const cutState = {
                 active: false,
                 points: [],
+                hide: false,
+                graph: null,
             };
 
             let enabled = true;
@@ -65,13 +71,13 @@ if (app) {
                     localStorage.setItem(NW_STORAGE_KEY, String(enabled));
                 } catch (_) {}
                 btn.classList.toggle("nw-off", !enabled);
-                btn.title = enabled ? "Node Wrangler: ON (Alt/Ctrl/Ctrl+Alt+RMB)" : "Node Wrangler: OFF";
+                btn.title = enabled ? "Node Wrangler: ON (Alt/Ctrl/Shift/Ctrl+Alt/Ctrl+Alt+Shift+RMB)" : "Node Wrangler: OFF";
             }
 
             const btn = document.createElement("button");
             btn.className = "comfy-nodewrangler-toggle";
             btn.textContent = "NodeWrangler";
-            btn.title = "Node Wrangler: ON (Alt/Ctrl/Ctrl+Alt+RMB)";
+            btn.title = "Node Wrangler: ON (Alt/Ctrl/Shift/Ctrl+Alt/Ctrl+Alt+Shift+RMB)";
             btn.style.cssText = `position:fixed;bottom:12px;left:130px;z-index:9999;width:100px;height:28px;border-radius:6px;border:1px solid ${NW_BUTTON_COLOR};background:rgb(40, 40, 40);color:${NW_BUTTON_COLOR};font:11px monospace;cursor:pointer;opacity:0.85;transition:opacity 0.15s,color 0.15s;`;
             const style = document.createElement("style");
             style.textContent = `.comfy-nodewrangler-toggle.nw-off{opacity:0.4!important;color:${NW_BUTTON_OFF_COLOR}!important;border:1px solid ${NW_BUTTON_OFF_COLOR}!important;}`;
@@ -540,14 +546,85 @@ if (app) {
                 }
             }
 
+            function hideNativeLink(link, event) {
+                const lg = typeof LiteGraph !== "undefined" ? LiteGraph : window.LiteGraph;
+                if (!lg?.ContextMenu || !canvas.showLinkMenu) return false;
+                // Easy Use converts links to Set/Get when showLinkMenu receives Shift.
+                // The modifier selects our gesture, not an extension's menu shortcut.
+                const menuEvent = new MouseEvent("contextmenu", {
+                    clientX: event.clientX,
+                    clientY: event.clientY,
+                    button: 2,
+                    view: window,
+                });
+                const OriginalMenu = lg.ContextMenu;
+                const menus = [];
+                // The native hide helper is private. Capture its menu callback synchronously;
+                // close the menus before the browser paints and restore the constructor.
+                lg.ContextMenu = new Proxy(OriginalMenu, {
+                    construct(target, args) {
+                        const menu = Reflect.construct(target, args);
+                        menus.push({ menu, items: args[0], options: args[1] });
+                        return menu;
+                    },
+                });
+                try {
+                    canvas.showLinkMenu(link, menuEvent);
+                } finally {
+                    lg.ContextMenu = OriginalMenu;
+                    for (const { menu } of menus) menu.close();
+                }
+                for (const { items, options } of menus) {
+                    const item = items.find(item => (item?.value ?? item) === "Hide Link");
+                    if (item && options?.callback) {
+                        options.callback(item, options, menuEvent);
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            const hideHitContext = document.createElement("canvas").getContext("2d");
+
+            function performHide(points, event) {
+                const graph = getActiveGraph();
+                if (!graph || graph !== cutState.graph || points.length < 2) return;
+                if (!points.some(([x, y]) => Math.hypot(x - points[0][0], y - points[0][1]) * (canvas.ds?.scale || 1) >= 4)) return;
+                const links = new Set();
+                const step = 3 / (canvas.ds?.scale || 1);
+                hideHitContext.lineWidth = step * 2;
+                for (const segment of canvas.renderedPaths || []) {
+                    if (!segment.path) continue;
+                    let hit = false;
+                    for (let i = 1; i < points.length && !hit; i++) {
+                        const [x, y] = points[i - 1];
+                        const dx = points[i][0] - x, dy = points[i][1] - y;
+                        const samples = Math.max(1, Math.ceil(Math.hypot(dx, dy) / step));
+                        for (let j = 0; j <= samples; j++) {
+                            if (hideHitContext.isPointInStroke(segment.path, x + dx * j / samples, y + dy * j / samples)) {
+                                hit = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!hit) continue;
+                    // A reroute segment can carry several links.
+                    for (const id of segment.linkIds || [segment.id]) {
+                        const link = graph.links[id];
+                        if (link) links.add(link);
+                    }
+                }
+                for (const link of links) hideNativeLink(link, event);
+            }
+
             function drawCutOverlay(ctx) {
                 if (!cutState.active || cutState.points.length < 2) return;
 
                 ctx.save();
-                ctx.strokeStyle = NW_CUT_COLOR;
+                ctx.strokeStyle = cutState.hide ? NW_HIDE_COLOR : NW_CUT_COLOR;
                 ctx.lineWidth = 2;
                 ctx.globalAlpha = 0.9;
-                ctx.shadowColor = NW_CUT_COLOR;
+                ctx.shadowColor = cutState.hide ? NW_HIDE_COLOR : NW_CUT_COLOR;
                 ctx.shadowBlur = NW_GLOW;
                 ctx.setLineDash([6, 4]);
 
@@ -699,6 +776,7 @@ if (app) {
                     const [gx, gy] = eventToGraph(e, false);
                     state.active = true;
                     state.connectAllMode = true;
+                    state.hideConnections = e.shiftKey;
                     state.sourceNode = node;
                     state.startX = gx;
                     state.startY = gy;
@@ -708,7 +786,7 @@ if (app) {
                     killEvent(e);
                     return;
                 }
-                if (!e.altKey) return;
+                if (!e.altKey || e.shiftKey) return;
 
                 const [gxHit, gyHit] = eventToGraph(e, true);
                 const node = getNodeAt(gxHit, gyHit);
@@ -717,6 +795,7 @@ if (app) {
                 const [gx, gy] = eventToGraph(e, false);
                 state.active = true;
                 state.connectAllMode = false;
+                state.hideConnections = false;
                 state.sourceNode = node;
                 state.startX = gx;
                 state.startY = gy;
@@ -756,7 +835,8 @@ if (app) {
                             if (targetNode.inputs[conn.inputSlot].link != null) {
                                 targetNode.disconnectInput(conn.inputSlot);
                             }
-                            srcNode.connect(conn.outputSlot, targetNode, conn.inputSlot);
+                            const link = srcNode.connect(conn.outputSlot, targetNode, conn.inputSlot);
+                            if (state.hideConnections && link) hideNativeLink(link, e);
                         }
                         const graph = getActiveGraph();
                         if (conns.length > 0 && graph) graph.change();
@@ -777,6 +857,7 @@ if (app) {
 
                 state.active = false;
                 state.connectAllMode = false;
+                state.hideConnections = false;
                 state.sourceNode = null;
                 state.targetNode = null;
                 suppressNextContext = true;
@@ -785,14 +866,16 @@ if (app) {
                 killEvent(e);
             }, true);
 
-            // --- Ctrl+RMB cut handlers ---
+            // --- Ctrl+RMB cut / Shift+RMB hide handlers ---
 
             window.addEventListener("pointerdown", (e) => {
-                if (!enabled || e.button !== 2 || !e.ctrlKey || e.altKey || !isOverCanvas(e) || isMaskEditorOpen()) return;
+                if (!enabled || e.button !== 2 || e.altKey || e.ctrlKey === e.shiftKey || !isOverCanvas(e) || isMaskEditorOpen()) return;
 
                 const [gx, gy] = eventToGraph(e, false);
                 cutState.active = true;
                 cutState.points = [[gx, gy]];
+                cutState.hide = e.shiftKey;
+                cutState.graph = getActiveGraph();
 
                 killEvent(e);
             }, true);
@@ -813,15 +896,28 @@ if (app) {
                 const [gx, gy] = eventToGraph(e, false);
                 cutState.points.push([gx, gy]);
 
-                performCut(cutState.points);
+                killEvent(e);
+                try {
+                    if (cutState.hide) performHide(cutState.points, e);
+                    else if (getActiveGraph() === cutState.graph) performCut(cutState.points);
+                } finally {
+                    cutState.active = false;
+                    cutState.points = [];
+                    cutState.graph = null;
+                    suppressNextContext = true;
+                    canvas.setDirty(true, true);
+                }
+            }, true);
 
+            function cancelSwipe() {
+                if (!cutState.active) return;
                 cutState.active = false;
                 cutState.points = [];
-                suppressNextContext = true;
+                cutState.graph = null;
                 canvas.setDirty(true, true);
-
-                killEvent(e);
-            }, true);
+            }
+            window.addEventListener("pointercancel", cancelSwipe, true);
+            window.addEventListener("blur", cancelSwipe);
 
             // Suppress context menu when wrangler was used
             let suppressNextContext = false;
