@@ -15,10 +15,6 @@ const NW_HIDE_COLOR = "#D6AA50";
 const NW_BUTTON_COLOR = "rgb(93, 178, 235)";
 const NW_BUTTON_OFF_COLOR = "#666";
 const NW_STORAGE_KEY = "comfy-nodewrangler-enabled";
-// Nodes 2.0 socket position corrections
-const NW_V2_OFFSET_Y = 9;
-const NW_V2_OFFSET_X = -10;
-const NW_V2_SLOT_SPACING = 4;
 
 
 let app;
@@ -379,18 +375,8 @@ if (app) {
                 return canvas.graph || app.graph;
             }
 
-            function isNodesV2() {
-                try { return !!app.ui.settings.getSettingValue('Comfy.VueNodes.Enabled'); } catch (_) {}
-                return false;
-            }
-
-            function getSlotPos(node, isOutput, slotIdx) {
-                const pos = node.getConnectionPos(isOutput, slotIdx);
-                if (pos && isNodesV2()) {
-                    pos[1] += NW_V2_OFFSET_Y + (slotIdx * NW_V2_SLOT_SPACING);
-                    pos[0] += isOutput ? NW_V2_OFFSET_X : -NW_V2_OFFSET_X;
-                }
-                return pos;
+            function getSlotPos(node, isInput, slotIdx) {
+                return isInput ? node.getInputPos(slotIdx) : node.getOutputPos(slotIdx);
             }
 
             function getNodeAt(graphX, graphY) {
@@ -399,17 +385,14 @@ if (app) {
                 return graph.getNodeOnPos(graphX, graphY, graph._nodes_in_order) || null;
             }
 
-            function eventToGraph(e, forHitTest) {
+            function eventToGraph(e) {
                 if (canvas.convertEventToCanvasOffset) {
                     const pos = canvas.convertEventToCanvasOffset(e);
                     return [pos[0], pos[1]];
                 }
                 const rect = canvas.canvas.getBoundingClientRect();
-                const scaleX = canvas.canvas.width / rect.width;
-                const scaleY = canvas.canvas.height / rect.height;
-                const needsDpiFix = (Math.abs(scaleX - 1) > 0.01 || Math.abs(scaleY - 1) > 0.01) && forHitTest;
-                const x = (e.clientX - rect.left) * (needsDpiFix ? scaleX : 1);
-                const y = (e.clientY - rect.top) * (needsDpiFix ? scaleY : 1);
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
                 const ds = canvas.ds;
                 return [
                     x / ds.scale - ds.offset[0],
@@ -469,81 +452,13 @@ if (app) {
 
             // --- Cut feature utilities ---
 
-            // 2D line-segment intersection: returns true if segment (p1,p2) intersects (p3,p4)
-            function segmentsIntersect(p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y) {
-                const d1x = p2x - p1x, d1y = p2y - p1y;
-                const d2x = p4x - p3x, d2y = p4y - p3y;
-                const cross = d1x * d2y - d1y * d2x;
-                if (Math.abs(cross) < 1e-10) return false;
-                const t = ((p3x - p1x) * d2y - (p3y - p1y) * d2x) / cross;
-                const u = ((p3x - p1x) * d1y - (p3y - p1y) * d1x) / cross;
-                return t >= 0 && t <= 1 && u >= 0 && u <= 1;
-            }
-
-            // Sample a cubic bezier into N points (same curve shape ComfyUI uses)
-            function sampleBezier(x1, y1, x2, y2, n) {
-                const dx = Math.abs(x2 - x1) * 0.5;
-                const cp1x = x1 + dx, cp1y = y1;
-                const cp2x = x2 - dx, cp2y = y2;
-                const pts = [];
-                for (let i = 0; i <= n; i++) {
-                    const t = i / n;
-                    const it = 1 - t;
-                    const x = it * it * it * x1 + 3 * it * it * t * cp1x + 3 * it * t * t * cp2x + t * t * t * x2;
-                    const y = it * it * it * y1 + 3 * it * it * t * cp1y + 3 * it * t * t * cp2y + t * t * t * y2;
-                    pts.push([x, y]);
-                }
-                return pts;
-            }
-
-            // Check if a cut path (array of [x,y]) intersects a bezier noodle between two points
-            function cutIntersectsLink(cutPoints, x1, y1, x2, y2) {
-                const bezierPts = sampleBezier(x1, y1, x2, y2, 24);
-                for (let ci = 0; ci < cutPoints.length - 1; ci++) {
-                    const [cx1, cy1] = cutPoints[ci];
-                    const [cx2, cy2] = cutPoints[ci + 1];
-                    for (let bi = 0; bi < bezierPts.length - 1; bi++) {
-                        if (segmentsIntersect(
-                            cx1, cy1, cx2, cy2,
-                            bezierPts[bi][0], bezierPts[bi][1],
-                            bezierPts[bi + 1][0], bezierPts[bi + 1][1]
-                        )) return true;
-                    }
-                }
-                return false;
-            }
-
-            // Find all links intersected by the cut path and disconnect them
-            function performCut(cutPoints) {
+            function performCut(points) {
                 const graph = getActiveGraph();
-                if (!graph || !graph.links || cutPoints.length < 2) return;
-
-                const toDisconnect = [];
-
-                for (const linkId in graph.links) {
-                    const link = graph.links[linkId];
-                    if (!link) continue;
-
-                    const originNode = graph.getNodeById(link.origin_id);
-                    const targetNode = graph.getNodeById(link.target_id);
-                    if (!originNode || !targetNode) continue;
-
-                    const outPos = getSlotPos(originNode, false, link.origin_slot);
-                    const inPos = getSlotPos(targetNode, true, link.target_slot);
-                    if (!outPos || !inPos) continue;
-
-                    if (cutIntersectsLink(cutPoints, outPos[0], outPos[1], inPos[0], inPos[1])) {
-                        toDisconnect.push({ node: targetNode, slot: link.target_slot });
-                    }
+                const links = getSwipedLinks(points);
+                for (const link of links) {
+                    graph.getNodeById(link.target_id)?.disconnectInput(link.target_slot);
                 }
-
-                for (const d of toDisconnect) {
-                    d.node.disconnectInput(d.slot);
-                }
-
-                if (toDisconnect.length > 0 && graph.change) {
-                    graph.change();
-                }
+                if (links.size > 0) graph.change();
             }
 
             function hideNativeLink(link, event) {
@@ -584,15 +499,15 @@ if (app) {
                 return false;
             }
 
-            const hideHitContext = document.createElement("canvas").getContext("2d");
+            const swipeHitContext = document.createElement("canvas").getContext("2d");
 
-            function performHide(points, event) {
-                const graph = getActiveGraph();
-                if (!graph || graph !== cutState.graph || points.length < 2) return;
-                if (!points.some(([x, y]) => Math.hypot(x - points[0][0], y - points[0][1]) * (canvas.ds?.scale || 1) >= 4)) return;
+            function getSwipedLinks(points) {
                 const links = new Set();
+                const graph = getActiveGraph();
+                if (!graph || graph !== cutState.graph || points.length < 2) return links;
+                if (!points.some(([x, y]) => Math.hypot(x - points[0][0], y - points[0][1]) * (canvas.ds?.scale || 1) >= 4)) return links;
                 const step = 3 / (canvas.ds?.scale || 1);
-                hideHitContext.lineWidth = step * 2;
+                swipeHitContext.lineWidth = step * 2;
                 for (const segment of canvas.renderedPaths || []) {
                     if (!segment.path) continue;
                     let hit = false;
@@ -601,7 +516,7 @@ if (app) {
                         const dx = points[i][0] - x, dy = points[i][1] - y;
                         const samples = Math.max(1, Math.ceil(Math.hypot(dx, dy) / step));
                         for (let j = 0; j <= samples; j++) {
-                            if (hideHitContext.isPointInStroke(segment.path, x + dx * j / samples, y + dy * j / samples)) {
+                            if (swipeHitContext.isPointInStroke(segment.path, x + dx * j / samples, y + dy * j / samples)) {
                                 hit = true;
                                 break;
                             }
@@ -614,7 +529,11 @@ if (app) {
                         if (link) links.add(link);
                     }
                 }
-                for (const link of links) hideNativeLink(link, event);
+                return links;
+            }
+
+            function performHide(points, event) {
+                for (const link of getSwipedLinks(points)) hideNativeLink(link, event);
             }
 
             function drawCutOverlay(ctx) {
@@ -664,8 +583,9 @@ if (app) {
 
                 function drawNodeHighlight(ctx, node, color) {
                     const collapsed = node.flags?.collapsed;
-                    const w = collapsed ? (node._collapsed_width || node.size[0]) : node.size[0];
-                    const h = collapsed ? titleH : node.size[1] + titleH;
+                    const size = node.renderingSize || node.size;
+                    const w = collapsed ? (node._collapsed_width || size[0]) : size[0];
+                    const h = collapsed ? titleH : size[1] + titleH;
                     ctx.save();
                     ctx.strokeStyle = color;
                     ctx.lineWidth = 2;
@@ -770,10 +690,10 @@ if (app) {
             window.addEventListener("pointerdown", (e) => {
                 if (!enabled || e.button !== 2 || !isOverCanvas(e) || isMaskEditorOpen()) return;
                 if (e.ctrlKey && e.altKey) {
-                    const [gxHit, gyHit] = eventToGraph(e, true);
+                    const [gxHit, gyHit] = eventToGraph(e);
                     const node = getNodeAt(gxHit, gyHit);
                     if (!node) return;
-                    const [gx, gy] = eventToGraph(e, false);
+                    const [gx, gy] = eventToGraph(e);
                     state.active = true;
                     state.connectAllMode = true;
                     state.hideConnections = e.shiftKey;
@@ -788,11 +708,11 @@ if (app) {
                 }
                 if (!e.altKey || e.shiftKey) return;
 
-                const [gxHit, gyHit] = eventToGraph(e, true);
+                const [gxHit, gyHit] = eventToGraph(e);
                 const node = getNodeAt(gxHit, gyHit);
                 if (!node) return;
 
-                const [gx, gy] = eventToGraph(e, false);
+                const [gx, gy] = eventToGraph(e);
                 state.active = true;
                 state.connectAllMode = false;
                 state.hideConnections = false;
@@ -809,11 +729,11 @@ if (app) {
             window.addEventListener("pointermove", (e) => {
                 if (!state.active) return;
 
-                const [gx, gy] = eventToGraph(e, false);
+                const [gx, gy] = eventToGraph(e);
                 state.mouseX = gx;
                 state.mouseY = gy;
 
-                const [gxHit, gyHit] = eventToGraph(e, true);
+                const [gxHit, gyHit] = eventToGraph(e);
                 const node = getNodeAt(gxHit, gyHit);
                 state.targetNode = (node && node !== state.sourceNode) ? node : null;
 
@@ -824,7 +744,7 @@ if (app) {
             window.addEventListener("pointerup", (e) => {
                 if (!state.active || e.button !== 2) return;
 
-                const [gxHit, gyHit] = eventToGraph(e, true);
+                const [gxHit, gyHit] = eventToGraph(e);
                 const targetNode = getNodeAt(gxHit, gyHit);
 
                 if (targetNode && targetNode !== state.sourceNode) {
@@ -871,7 +791,7 @@ if (app) {
             window.addEventListener("pointerdown", (e) => {
                 if (!enabled || e.button !== 2 || e.altKey || e.ctrlKey === e.shiftKey || !isOverCanvas(e) || isMaskEditorOpen()) return;
 
-                const [gx, gy] = eventToGraph(e, false);
+                const [gx, gy] = eventToGraph(e);
                 cutState.active = true;
                 cutState.points = [[gx, gy]];
                 cutState.hide = e.shiftKey;
@@ -883,7 +803,7 @@ if (app) {
             window.addEventListener("pointermove", (e) => {
                 if (!cutState.active) return;
 
-                const [gx, gy] = eventToGraph(e, false);
+                const [gx, gy] = eventToGraph(e);
                 cutState.points.push([gx, gy]);
 
                 canvas.setDirty(true, true);
@@ -893,7 +813,7 @@ if (app) {
             window.addEventListener("pointerup", (e) => {
                 if (!cutState.active || e.button !== 2) return;
 
-                const [gx, gy] = eventToGraph(e, false);
+                const [gx, gy] = eventToGraph(e);
                 cutState.points.push([gx, gy]);
 
                 killEvent(e);
